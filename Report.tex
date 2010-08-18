@@ -121,14 +121,14 @@ benchmark task, how? A bash script launches benchmark with monitor.
 Before to first "start" signal for benchmark, monitor enables sched\_switch tracer. 
 Output of  tracer is a file that shows timestamps of context switch and 
 wakeup of each task of the benchmark. According by theese informations, it is possible 
-compute average scheduling latency and average execution time of each task.
-With function graph tracer it is possible retrive average execution time of each
+compute average scheduling latency and average execution time (AET) of each task.
+With function graph tracer it is possible retrive AET of each
 call of interesting kernel functions. Also in this case, a bash script launches
 benchmark with monitor that enables function graph tracer before to send "start" signal
 for the first benchmark sample. Output of tracer is a file that shows latency of each
 kernel function call and other information such as context within function is called,
 cpu that is executing function etc..
-According by theese informations, it is possible compute average execution time of each 
+According by theese informations, it is possible compute AET of each 
 function call and ...
 
 TODO tante altre cose che solo alla fine dir\'o quali mi servono e quali no
@@ -171,6 +171,56 @@ In this folder it will be created theese directories:
 	\item[graphs:] contains plot files generated according files present in data folder
 	\item[png:] contains png files produced by different scripts called by main test executed
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{ptest functioning}
+
+ptest is main test to measure AET of a sample, AET of each task, load/store 
+miss rate of benchmark, AET of kernel functions.
+
+ptest is based on a configration file called init.env that user can modify using 
+bash script init\_env.sh. In this file there are many paramteres, for a detailed
+documentation about them see init.env, now we pay attention only on most important.
+Theese are:
+
+\begin{description}
+	\item[DIM\_LIST:] it is the list of buffer dimensions to use in benchmark
+	\item[NR\_TRY\_PERFORMANCE\_TEST:] it is the number of iteration executed by ptest
+\end{description}
+
+we call NR\_DIM number of elements present in DIM\_LIST
+
+TODO ha poco senso la frase sotto messa così
+ptest executes wrapper bash scripts for each kernel present in images folder
+
+ptest follows this steps:
+
+\begin{description}
+	\item[Step1:] User specifies in init\_env.sh two parameters previously seen 
+and execute init\_env.sh to configure init.env 
+For example: consider NR\_TRY\_PERFORMANCE\_TEST=10 DIM\_LIST="4 8 16 32"
+Pay attention to theese data, because are taken as reference for next steps
+	\item[Step2:] launch run.sh. This script, enter in a loop and for 
+NR\_TRY\_PERFORMANCE\_TEST iterations executes script to measure 
+AET of a sample, AET of each task, load/store miss rate. Each script 
+launches benchmark with different buffer dimensions. In our case 
+with 4, 8, 16 and 32 Kb, therefore each script is executed 
+NR\_TRY\_PERFORMANCE\_TEST x NR\_DIM. 
+Produced files by each script are analyzed in the next section 
+	\item[Step3:] build bar graphs. A script read data in data folder,
+builds bar graphics and put them in graphics folder. Details about graphics are
+in the next section
+	\item[Step4:] select another kernel to test, reboot system and go to Step2 
+until all kernel in image folder are tested.
+	\item[Step5:] build global graphics. According data in different data folders
+created, builds "global" graphics
+
+\end{description}
+
+TODO alla fine metti la storia che run.sh si pu\'o lanciare se \'e in esecuzione
+un kernel presente in images
+
+
 
 
 
