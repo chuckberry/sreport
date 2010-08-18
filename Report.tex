@@ -145,8 +145,32 @@ and it is implemented in run.sh. In the third section is explained how it works.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Toolchain structure}
 
-TODO
+Toolchain has structure see in 
 
+TODO insert here figure of toolchain structure
+
+\begin{description}
+	\item[bmarks] contains benchmark binaries 
+	\item[images] contains kernel images to test
+	\item[scripts] contains bash scripts to produce graphics and execute benchmark
+	\item[results] contains data produced
+	\item[log] contains test log files
+\end{description}
+
+All folders are "flat" TODO intendo dire directory piatte che han dentro solo files
+directories, instead results folder has a dynamic strcuture. It follows this schema:
+
+TODO insert here figure of results structure
+
+Every times that a main test is executed, a new folder in results directory is created.
+Name of new folder is composed by date\_of\_today-version\_localversion of kernel in use
+In this folder it will be created theese directories:
+
+\begin{description}
+	\item[data:] contains text files produced by different scripts called by main test executed
+	\item[graphs:] contains plot files generated according files present in data folder
+	\item[png:] contains png files produced by different scripts called by main test executed
+\end{description}
 
 
 
