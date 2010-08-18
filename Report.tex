@@ -60,22 +60,14 @@
 % Please do not insert a line here
 %
 \\
-Last-name First-name\\
-Matr. 123456\\
 \hspace{10ex}
-Last-name First-name\\
-Matr. 123456\\[10ex]
+Marini Matteo\\
+Matr. 724626\\[10ex]
 
 \begin{myabstract} Abstract \end{myabstract}
-This is a normal text in 10pt type size and 12pt line spacing.
-Place here a summary of your report. Focus on what is the problem and how you
-propose to tackle it. Briefly resume achieved results.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras dapibus. Donec
-fermentum mauris non lectus. Nulla porttitor pede id ante. Donec in erat
-pellentesque erat ultrices rutrum. Pellentesque id tellus. Donec vel mi non dui
-adipiscing tempor.  Nunc laoreet pede ut lectus. Aenean aliquam quam a sem. Duis
-at elit? Ut dolor massa, dictum vel; convallis quis, ullamcorper id, urna.
+This report explains how a kernel with a new patch is tested and 
+which data and graphics are generated. It is explained how to insert new kernel to test
+and it shows the workflow followed to compare vanilla kernel with new kernels
 
 \vspace{4ex}	% Please do not remove or reduce this space here.
 \begin{multicols}{2}
@@ -83,162 +75,80 @@ at elit? Ut dolor massa, dictum vel; convallis quis, ullamcorper id, urna.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.  Fusce non eros nec dui
-sagittis placerat. Sed vulputate accumsan massa? Quisque dapibus consequat
-magna! Mauris ante erat, ullamcorper eu, iaculis a, posuere at, massa. Donec
-diam orci, luctus non, tristique at, volutpat vulputate, dui.  Suspendisse
-potenti. Vivamus lacinia justo id enim! Maecenas ut odio. Donec nisi urna,
-gravida eu, sollicitudin eget, gravida quis, dolor. Nulla quam erat, convallis
-id, lobortis vel, rutrum tempor, felis. Nam id ante. Sed hendrerit ultricies
-sapien. Morbi interdum convallis elit. Class aptent taciti sociosqu ad litora
-torquent per conubia nostra, per inceptos himenaeos. Suspendisse potenti.
-Praesent egestas.
+To understand how to improve kernel performance, it was necessary to develop a toolchain
+that, for each kernel to test, it performs automatically necessary measures.
+This toolchain select kernel to test, execute tests, select next kernel and reboot system.
+All theese activities are performed automatically. User can decide which test to do, 
+editing a configuration file present in toolchain. Detailed documentation of each script
+used is in relative bash script file.
+This report is divided in TODO numero sezioni sections: the first section presents a
+briefly description of benchmark used to measure kernel patch improvements, 
+the second section describes structure of the toolchain,
+the third section shows an high level description of bash scripts that performs
+all measures, the fourth section describes which data are produced, how to use them
+and logic used to build bar graphs. In the last section are examined possible use case
+of toolchain
 
+TODO: mettere le storie sulla possibile espansione della toolchain verso altri benchmark
+magari come use case
 
-%-----------------------------------------------------------------------------
-\subsection{The first subsection of the first \\ Section}
+TODO: per ora mi viene in mente solo qeusto use case
+
+TODO: da qualche parte devo mettere la naming convention
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Benchmark and tool used to measure kernel improvements}
 % Please avoid separations in titles
 % and separate text manually
 
-This is a citation \cite{Norman09Learn} and here is another citation
-\cite{Peyton93Howto}.  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-Sed velit. Ut id orci ut quam placerat rhoncus. Pellentesque sed nisl. Aliquam
-sagittis nunc ut dui.  Nullam elementum felis eget mauris! Curabitur nunc arcu,
-venenatis ac, commodo id, tristique molestie, urna? Donec in tortor vel augue
-rhoncus elementum. Nunc ac felis. Nam nulla quam, cursus sed, egestas nec,
-rutrum et, purus. Nullam sapien mi, ullamcorper rutrum, placerat eget,
-consectetur ut, metus. Integer porta, lacus non fermentum pretium, enim dui
-auctor ligula, ut faucibus lacus sem a metus. Maecenas posuere dui eu est. Ut
-massa urna, auctor quis, tempus et, sollicitudin quis, justo?
+Application used as benchmark for kernel patch has this structure
 
+TODO figure of benchmark, 
 
-And this is the reference to a single column figure (see {\bf Figure
-\ref{fig:myfigure1}}).  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-Vivamus dapibus convallis odio. Nunc sollicitudin laoreet ante! Vivamus dictum
-euismod orci.  Nullam vitae sapien. Maecenas semper massa varius dui? Aenean et
-sapien. Fusce tellus pede, dictum nec, fringilla id, molestie et, neque.
-Suspendisse tellus!  Donec venenatis tristique erat. Nulla elementum felis ut
-sem. Nunc vel arcu vel mauris pulvinar congue.
+How application works is well documented in TODO metti ref alla tesi di lucas
+Each sample of sink mixer is produce periodically. Monitor is task that launches "start"
+signal for production of a sample, therefore benchmark can be launched only with
+monitor. Number of sample (NR\_SAM) to produce is decided by it. 
+For each sample, monitor measure arrival time. At the end of application 
+monitor has recorded NR\_SAM arrival times and it can provides 
+\textbf{ average and variance} of theese arrival times. 
+Theese statistical values are principal measures to characterize 
+kernel patches improvements.
 
-\begin{figurehere}
- \centering
- \includegraphics[width=8cm, height=4cm]{./eps/placeholder.eps}
- \caption{Some single-column figure caption.}
- \label{fig:myfigure1}
-\end{figurehere}
+Other important measures are obtained by combined use of monitor and ftrace.
+With sched\_switch tracer, it is possible retrive averge execution time of each
+benchmark task, how? A bash script launches benchmark with monitor. 
+Before to first "start" signal for benchmark, monitor enables sched\_switch tracer. 
+Output of  tracer is a file that shows timestamps of context switch and 
+wakeup of each task of the benchmark. According by theese informations, it is possible 
+compute average scheduling latency and average execution time of each task.
+With function graph tracer it is possible retrive average execution time of each
+call of interesting kernel functions. Also in this case, a bash script launches
+benchmark with monitor that enables function graph tracer before to send "start" signal
+for the first benchmark sample. Output of tracer is a file that shows latency of each
+kernel function call and other information such as context within function is called,
+cpu that is executing function etc..
+According by theese informations, it is possible compute average execution time of each 
+function call and ...
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec enim? Sed sapien.
-Nulla sit amet risus eu pede posuere hendrerit. Sed convallis odio ut magna!
-Suspendisse potenti. Maecenas laoreet ligula in sapien? Vestibulum condimentum.
-Duis faucibus mollis magna? Sed blandit nulla venenatis pede. Suspendisse vitae
-augue sed ipsum semper commodo? Nullam sapien nisl, varius id; tristique nec,
-suscipit ac; massa. Nunc leo. Praesent at tortor. Donec non odio non tellus
-posuere sodales.
+TODO tante altre cose che solo alla fine dir\'o quali mi servono e quali no
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque a sapien
-eu est viverra placerat. In dapibus. Vestibulum interdum tellus vitae nulla.
-Fusce egestas mollis justo. Sed neque risus, pulvinar vel, tempus id, varius at,
-diam. Mauris consequat tempor tellus. Proin eleifend augue non mi. Aliquam erat
-volutpat. Donec id justo. Praesent id velit. Nulla facilisi. Mauris in tellus!
-Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia
-Curae;
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque a sapien
-eu est viverra placerat. In dapibus. Vestibulum interdum tellus vitae nulla.
-Fusce egestas mollis justo. Sed neque risus, pulvinar vel, tempus id, varius at,
-diam. Mauris consequat tempor tellus. Proin eleifend augue non mi. Aliquam erat
-volutpat. Donec id justo. Praesent id velit. Nulla facilisi. Mauris in tellus!
-Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia
-Curae;
-
-
-%-----------------------------------------------------------------------------
-\subsection{The second subsection of the first \\ Section}
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec et ligula. Nullam
-in libero. Donec dictum pede in justo. Lorem ipsum dolor sit amet, consectetur
-adipiscing elit. Aliquam congue. Aliquam egestas. Nunc eu est ac nibh mattis
-vestibulum. Curabitur aliquet bibendum odio. Etiam hendrerit. Nunc a velit quis
-dui molestie consequat. Sed et turpis et mi feugiat tincidunt. Sed sollicitudin.
-Ut risus? Duis eget orci eu turpis consectetur fringilla? Lorem ipsum dolor sit
-amet, consectetur adipiscing elit. Nullam tellus ligula, placerat vitae, tempor
-vitae, varius id; est! Nullam et ipsum eget tellus eleifend sollicitudin? Fusce
-urna massa, imperdiet vitae, convallis in; lacinia sed, tortor.
-
-\begin{figure*}[t]
-  \centering
- \includegraphics[width=16cm, height=4cm]{./eps/placeholder.eps}
- \caption{Some wide-figure caption.}
- \label{fig:myfigure2}
-\end{figure*}
-
-And this is the reference to a single column figure (see {\bf Figure
-\ref{fig:myfigure2}}). Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-Nullam consectetur neque at orci. Curabitur non metus. Praesent congue porta
-nisl. Suspendisse ultricies, sem ac ultrices aliquam, erat nisi fermentum est; a
-rhoncus mauris arcu eget nibh. Aliquam sollicitudin velit non erat. Lorem ipsum
-dolor sit amet, consectetur adipiscing elit. Integer nulla diam, facilisis vel,
-accumsan sed; molestie egestas, massa. Fusce malesuada, ipsum et pulvinar
-aliquet, est dolor laoreet enim, quis porttitor erat mauris eget sapien. Integer
-vitae urna. Duis lectus.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec et ligula. Nullam
-in libero. Donec dictum pede in justo. Lorem ipsum dolor sit amet, consectetur
-adipiscing elit. Aliquam congue. Aliquam egestas. Nunc eu est ac nibh mattis
-vestibulum. Curabitur aliquet bibendum odio. Etiam hendrerit. Nunc a velit quis
-dui molestie consequat. Sed et turpis et mi feugiat tincidunt. Sed sollicitudin.
-Ut risus? Duis eget orci eu turpis consectetur fringilla? Lorem ipsum dolor sit
-amet, consectetur adipiscing elit. Nullam tellus ligula, placerat vitae, tempor
-vitae, varius id; est! Nullam et ipsum eget tellus eleifend sollicitudin? Fusce
-urna massa, imperdiet vitae, convallis in; lacinia sed, tortor.
+It is clear that for each measure, it is necessary to launch benchmark and monitor by 
+a bash script used as wrapper, and produced data are managed by wrapper in order
+to produce graphics, png etc..
+In the toolchain there is one main test. We call main test a bash script that 
+performs different measures, in plain words: a scripts that call more than one
+scripts that wraps benchmark and monitor. Main test present in toolchain 
+is called "Performace test" (ptest for briefly)
+and it is implemented in run.sh. In the third section is explained how it works. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{The Second Section}
+\section{Toolchain structure}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.  Aenean magna. Nunc non
-ante eget nibh condimentum tempor. Nullam ullamcorper lectus eget mauris. Nam
-neque orci; rhoncus at, pulvinar quis, elementum sit amet, turpis. Mauris
-posuere nisi ut justo. Morbi non lorem vitae mauris interdum faucibus.
-Vestibulum ut sapien in augue faucibus fringilla. Vestibulum ante ipsum primis
-in faucibus orci luctus et ultrices posuere cubilia Curae; Etiam vestibulum
-fringilla libero. Curabitur libero diam, hendrerit sit amet, ornare eget,
-imperdiet vel, purus!
+TODO
 
 
-%-----------------------------------------------------------------------------
-\subsection{The first subsection of the second \\ Section}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam consectetur ante at
-eros. Vestibulum mi nisi, venenatis sollicitudin, tempus sed, auctor id, tortor.
-Fusce orci. Duis tellus arcu, euismod sed, consequat sit amet, elementum vel,
-mauris. Curabitur leo diam; dapibus quis, condimentum vitae, dignissim ut, diam.
-Nulla et nulla eget elit volutpat sagittis. Cras consequat. Aenean quis dui.
-Integer tortor velit; cursus ut, blandit vel, aliquet et, nulla. Pellentesque
-viverra! Vivamus augue. Nunc viverra vulputate justo. Nulla nec augue?
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc enim quam, lacinia
-nec, porta eu, interdum eget; libero? Duis scelerisque. Pellentesque habitant
-morbi tristique senectus et netus et malesuada fames ac turpis egestas. Sed
-tortor tellus, dignissim sit amet, porta a, consectetur facilisis, urna.
-Vestibulum dignissim blandit dolor. Lorem ipsum dolor sit amet, consectetur
-adipiscing elit. Vestibulum ante ipsum primis in faucibus orci luctus et
-ultrices posuere cubilia Curae; Quisque nec dolor at lacus scelerisque rhoncus.
-Etiam eu nisl. Sed mollis, risus a aliquet pharetra; velit enim sollicitudin
-neque, et gravida nibh ipsum a ipsum. In hac habitasse platea dictumst.
-Suspendisse dapibus varius elit! Fusce eros dui, tempor sit amet, tempus at;
-convallis auctor, justo. Morbi interdum molestie magna. Duis iaculis felis sed
-velit. Integer ultricies pulvinar odio.
-
-%-----------------------------------------------------------------------------
-\subsection{The second subsection of the second \\ Section}
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris eget mauris.
-Nulla facilisi. Ut condimentum tempor eros? Integer metus mauris, consectetur
-sit amet, tempor a, facilisis eu, nisl. Vestibulum at turpis. Ut vitae tortor
-pretium nisl vestibulum blandit. Nulla nibh urna, semper et, elementum at,
-mattis ut, nisi! Cum sociis natoque penatibus et magnis dis parturient montes,
-nascetur ridiculus mus. Morbi vel ligula eget lacus convallis venenatis. Aliquam
-lacinia tincidunt felis. Ut dui.
 
 % We suggest the use of JabRef for editing your bibliography file (Report.bib)
 \bibliographystyle{splncs}
