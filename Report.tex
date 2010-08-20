@@ -190,7 +190,7 @@ Theese are:
 
 we call NR\_DIM number of elements present in DIM\_LIST
 
-TODO ha poco senso la frase sotto messa così
+TODO ha poco senso la frase sotto messa cos\'i
 ptest executes wrapper bash scripts for each kernel present in images folder
 
 ptest follows this steps:
@@ -220,6 +220,120 @@ created, builds "global" graphics
 TODO alla fine metti la storia che run.sh si pu\'o lanciare se \'e in esecuzione
 un kernel presente in images
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Produced data and graphics}
+
+All bash scripts called by ptest, write their measures in a file that has like
+suffix something like this "\_stats.txt", prefix of file change according bash 
+script that creates it. Each bash script has its own file. We call this file STATS\_FILE 
+Each STATS\_FILE follows this format:
+
+\begin{description}
+	\item[<TITLE>] Specifies title of graph to generate
+	\item[<XLAB>] Specifies x label of graph to generate
+	\item[<YLAB>] Specifies y label of graph to generate
+	\item[<PREFIX\_PLOT>] Specifies name of "local" graphic
+	\item[<AVG\_COL\_TAG>] Specifies index of column that contains average values
+	\item[<VAR\_COL\_TAG>] Specifies index of column that contains variance values
+\end{description}
+
+We define "local" graphic, a graphic that shows data related only to 
+kernel in use when ptest was executed.
+All theese tags represent an header that will be read from bash script that builds 
+"local" graphics. At each header corresponds one "local" graphic, a STATS\_FILE can 
+contains more than one header. 
+After headers there are data, that follow theese format:
+
+
+<QUERY\_TAG>Average = "value" Variance = "value" Min = "value" Max = "value" <other values>
+....
+
+TODO la storia del one column per un solo kernel \'e una cazzata, toglila
+
+Each script analyzes a list of values and compute their average and variance,
+theese values can be execution time of task, load/store miss rate etc...
+Each script arranges theese statistical data in format showed above.
+Furthermore, a script can measure other values such as number of function call
+number of migration of a task etc... and add them after measured statistical values.
+
+TODO dire qualcosa sugli indici 
+
+How to build a "local" graphic. (da qui in poi \'e lavora il local\_graphs)
+There are two types of "local" graphic: "per dimension"  and "per task" 
+First type has buffer dimension on x axis, latter has threads name on x axis.
+Now I explain how to build a "per dimension" bar graph
+
+TODO mettere riferimento a questo esempio
+Considering previous example. Each script is executed 40 times 
+(NR\_TRY\_PERFORMANCE\_TEST x NR\_DIM), and for each iteration 
+it writes an entry in STATS\_FILE, therefore there are 10 entries for each 
+dimension in DIM\_LIST. For this type of graph QUERY\_TAG has this format
+
+<buffer\_dim> where buffer\_dim is the dimension used by benchmark in execution
+
+in this way, it is easy consider entries of each dimesion, there will be 10 entries for each 
+dimension considered, pick value at column indicates in AVG\_COL\_TAG  and in VAR\_COL\_TAG 
+and compute mean of theese values, in this way we have two values: first is mean
+of averages and the latter is mean of variances. Repeat this procedure for each dimension and finally we
+will have 5 average and 5 variance. Note that a column in an entry is delimited by 
+a white space, therefore value of Average is column 3, value of variance is column 6 etc.
+In plain words, procedure is very similar to a SQL query
+
+Now we can build our "local" bar graph. Procedure to build
+"per task" graph is the same, but in scripts that produce data for this type of bar graph,
+QUERY\_TAG has this format: 
+
+<buffer\_dim><task\_name> in this case we group values according task name and buffer dimension
+
+Special cases:
+As mentioned before, for some script, an entry in STATS\_FILE presents aditional information 
+and not only standard data. 
+When in STATS\_FILE, AVG\_COL\_TAG and VAR\_COL\_TAG indicates different indexes, our average
+and variance values are mean of a list of values, as shoed above. But if indexes are equal, namely 
+they indicates the same column, mean value computated is the average of a list of values, variance
+is the variance of a list of values and not the mean as in previous case.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+As I said before a "local" graphic has one column but a variable
+
+Each script according 
+
+As I said before a "local" graphic has one column but a variable number of rows that varies 
+according to what we want to put on x axis such as buffer dimensions, tasks executed in benchmark etc..
+To compute value for each row, is used QUERY\_TAG. Each script decides what put in x axis
+and consequently what put in QUERY\_TAG, for example: bar graph of average execution time
+of a sample will have buffer dimensions in x axis label,  
+
+
+To build a "local" graphic, 
+
+
+
+Tag at the end of line, 
+
+
+-> chi sono gli average var values
+-> cosa mettere in X e Y label
+
+
+
+
+
+
+
+Considering previous example, 
 
 
 
