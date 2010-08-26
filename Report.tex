@@ -174,50 +174,61 @@ In this folder it will be created theese directories:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{ptest functioning}
 
-ptest is main test to measure AET of a sample, AET of each task, load/store 
+ptest is main test that measures AET of a sample, AET of each task, load/store 
 miss rate of benchmark, AET of kernel functions.
 
-ptest is based on a configration file called init.env that user can modify using 
-bash script init\_env.sh. In this file there are many paramteres, for a detailed
-documentation about them see init.env, now we pay attention only on most important.
-Theese are:
+As I said above, user can edit parameters of ptest modifing a configuration file (init.env).
+In this file are contained all parameters that describe structure of toolchain, name of files
+used to reboot system and select kernel to test and parameters used to configure main test
+ptest. For a detailed description of each parameter see init.env
+User can modify init.env manually or automatically using init_env.sh.
+In init_env.sh there are four execution profile for ptest:
+\begin{description}
+	\item[default] standard execution of ptest
+	\item[performance] only bash scripts used to measure performance of benchmark are enabled 
+	\item[function] only bash scripts used to measure performance of kernel function are enabled
+	\item[experimental] user can specify what he wants
+\end{description}
+
+User is strongly encouraged to use init_env.sh to modify configuration file, for two reasons:
+this procedure speed up editing of init.env and it prevent user to make any mistake, because init_env.sh
+edit parameters related to execution of ptest, in this way structure of toolchain or name of different
+files used aren't touched. 
+Most important parameters used to configure ptest, they are:
 
 \begin{description}
 	\item[DIM\_LIST:] it is the list of buffer dimensions to use in benchmark
 	\item[NR\_TRY\_PERFORMANCE\_TEST:] it is the number of iteration executed by ptest
 \end{description}
 
-we call NR\_DIM number of elements present in DIM\_LIST
-
-TODO ha poco senso la frase sotto messa cos\'i
-ptest executes wrapper bash scripts for each kernel present in images folder
-
+we call NR\_DIM number of elements present in DIM\_LIST.
 ptest follows this steps:
 
 \begin{description}
-	\item[Step1:] User specifies in init\_env.sh two parameters previously seen 
+	\item[Step1:] User specifies in init\_env.sh which desired execution profile
 and execute init\_env.sh to configure init.env 
-For example: consider NR\_TRY\_PERFORMANCE\_TEST=10 DIM\_LIST="4 8 16 32"
-Pay attention to theese data, because are taken as reference for next steps
+For example: User select deafault profile that set NR\_TRY\_PERFORMANCE\_TEST=10 and DIM\_LIST="4 8 16 32"
+Pay attention to theese data, because they are taken as reference for next steps
 	\item[Step2:] launch run.sh. This script, enter in a loop and for 
-NR\_TRY\_PERFORMANCE\_TEST iterations executes script to measure 
-AET of a sample, AET of each task, load/store miss rate. Each script 
-launches benchmark with different buffer dimensions. In our case 
-with 4, 8, 16 and 32 Kb, therefore each script is executed 
+NR\_TRY\_PERFORMANCE\_TEST iterations executes enabled scripts. Each script, whatever it measures, 
+receive as input paramters: number of iteration in execution, name of bencmark to execute, buffer dimension to use in benchmark. 
+Then it launches benchmark with buffer dimension received. In our case 
+at the first tim with 4, then with 8 and so on, therefore each script is executed 
 NR\_TRY\_PERFORMANCE\_TEST x NR\_DIM. 
-Produced files by each script are analyzed in the next section 
 	\item[Step3:] build bar graphs. A script read data in data folder,
 builds bar graphics and put them in graphics folder. Details about graphics are
 in the next section
-	\item[Step4:] select another kernel to test, reboot system and go to Step2 
+	\item[Step4:] select another kernel to test, update .status_bench and .running_bench, reboot system and go to Step2 
 until all kernel in image folder are tested.
 	\item[Step5:] build global graphics. According data in different data folders
 created, builds "global" graphics
 
 \end{description}
 
-TODO alla fine metti la storia che run.sh si pu\'o lanciare se \'e in esecuzione
-un kernel presente in images
+.status_bench and .running_bench are used by a deamon that at boot of system, continue execution of ptest 
+Only thing at which user has to pay attention is to launch run.sh, only if kernel in use at that moment
+is a kernel to test, for example if kernel to test are k_1, k_2 and k_3, kernel in use 
+must be on of theese.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Produced data and graphics}
