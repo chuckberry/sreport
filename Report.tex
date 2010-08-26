@@ -82,7 +82,7 @@ All theese activities are performed automatically. User can decide which test to
 editing a configuration file present in toolchain. Detailed documentation of each script
 used is in relative bash script file.
 This report is divided in TODO numero sezioni sections: the first section presents a
-briefly description of benchmark used to measure kernel patch improvements, 
+briefly description of benchmark and tools used to measures performance of kernel, 
 the second section describes structure of the toolchain,
 the third section shows an high level description of bash scripts that performs
 all measures, the fourth section describes which data are produced, how to use them
@@ -106,35 +106,34 @@ Application used as benchmark for kernel patch has this structure
 TODO figure of benchmark, 
 
 How application works is well documented in TODO metti ref alla tesi di lucas
-Each sample of sink mixer is produce periodically. Monitor is task that launches "start"
+Each sample is produced periodically by sink mixer. Monitor is task that launches "start"  
 signal for production of a sample, therefore benchmark can be launched only with
-monitor. Number of sample (NR\_SAM) to produce is decided by it. 
-For each sample, monitor measure arrival time. At the end of application 
-monitor has recorded NR\_SAM arrival times and it can provides 
-\textbf{ average and variance} of theese arrival times. 
-Theese statistical values are principal measures to characterize 
+monitor. TODO rivedi questa frase che forse non è vera 
+Number of sample (NR\_SAM) to produce is decided by it. 
+Monitor measures production time of each sample. At the end of application 
+monitor has recorded NR\_SAM times and it can provides 
+\textbf{ average and variance} of theese measures. 
+Theese statistical values are principal criteria to characterize 
 kernel patches improvements.
 
 Other important measures are obtained by combined use of monitor and ftrace.
-With sched\_switch tracer, it is possible retrive averge execution time of each
-benchmark task, how? A bash script launches benchmark with monitor. 
-Before to first "start" signal for benchmark, monitor enables sched\_switch tracer. 
-Output of  tracer is a file that shows timestamps of context switch and 
-wakeup of each task of the benchmark. According by theese informations, it is possible 
-compute average scheduling latency and average execution time (AET) of each task.
-With function graph tracer it is possible retrive AET of each
-call of interesting kernel functions. Also in this case, a bash script launches
-benchmark with monitor that enables function graph tracer before to send "start" signal
-for the first benchmark sample. Output of tracer is a file that shows latency of each
-kernel function call and other information such as context within function is called,
-cpu that is executing function etc..
+With sched\_switch tracer, it is possible retrive averge execution time (AET) of each
+thread present in benchmark, how? A bash script launches benchmark with monitor. 
+Before to launch first "start" signal for benchmark, monitor enables sched\_switch tracer. 
+Output of tracer is a file that shows timestamps of context switches and 
+wakeups of each task of the benchmark. According by theese informations, it is possible 
+compute average scheduling latency and AET of each task.
+With function graph tracer it is possible calculate AET of each
+call of a certain kernel functions. Also in this case, a bash script launches
+benchmark with monitor, that enables funcgraph tracer before to send "start" signal
+for the first benchmark sample. Output of tracer is a file that shows execution time employed by each
+kernel function call and other informations such as: context within which function is called,
+cpu that executed function etc..
 According by theese informations, it is possible compute AET of each 
-function call and ...
-
-TODO tante altre cose che solo alla fine dir\'o quali mi servono e quali no
+function call. 
 
 It is clear that for each measure, it is necessary to launch benchmark and monitor by 
-a bash script used as wrapper, and produced data are managed by wrapper in order
+a bash script used as wrapper, in this way, produced data are managed by wrapper in order
 to produce graphics, png etc..
 In the toolchain there is one main test. We call main test a bash script that 
 performs different measures, in plain words: a scripts that call more than one
