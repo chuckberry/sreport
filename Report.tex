@@ -67,7 +67,7 @@ Matr. 724626\\[10ex]
 \begin{myabstract} Abstract \end{myabstract}
 This report explains how a kernel with a new patch is tested and 
 which data and graphics are generated. It is explained how to insert new kernel to test
-and it shows the workflow followed to compare vanilla kernel with new kernels
+and it shows only the workflow followed to compare different kernels to test.
 
 \vspace{4ex}	% Please do not remove or reduce this space here.
 \begin{multicols}{2}
@@ -89,56 +89,47 @@ all measures, the fourth section describes which data are produced, how to use t
 and logic used to build bar graphs. In the last section are examined possible use case
 of toolchain
 
-TODO: mettere le storie sulla possibile espansione della toolchain verso altri benchmark
-magari come use case
-
-TODO: per ora mi viene in mente solo qeusto use case
-
-TODO: da qualche parte devo mettere la naming convention
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Benchmark and tool used to measure kernel improvements}
 % Please avoid separations in titles
 % and separate text manually
 
-Application used as benchmark for kernel patch has this structure
+Application used as benchmark has this structure
 
 TODO figure of benchmark, 
 
-How application works is well documented in TODO metti ref alla tesi di lucas
-Each sample is produced periodically by sink mixer. Monitor is task that launches "start"  
-signal for production of a sample, therefore benchmark can be launched only with
-monitor. TODO rivedi questa frase che forse non è vera 
-Number of sample (NR\_SAM) to produce is decided by it. 
-Monitor measures production time of each sample. At the end of application 
-monitor has recorded NR\_SAM times and it can provides 
-\textbf{ average and variance} of theese measures. 
-Theese statistical values are principal criteria to characterize 
-kernel patches improvements.
+How application works is well documented in TODO ref alla tesi di lucas
+Monitor is task that launches "start" signal for production of a sample, therefore benchmark can be launched only with
+monitor. Number of sample (NR\_SAM) to produce is decided by it.
+Monitor measures production time of each sample. At the end of application
+monitor has recorded NR\_SAM times and it can provides \textbf{ average and variance} of theese measures. 
+Theese statistical values are principal criteria to characterize kernel improvements.
 
 Other important measures are obtained by combined use of monitor and ftrace.
 With sched\_switch tracer, it is possible retrive averge execution time (AET) of each
 thread present in benchmark, how? A bash script launches benchmark with monitor. 
-Before to launch first "start" signal for benchmark, monitor enables sched\_switch tracer. 
-Output of tracer is a file that shows timestamps of context switches and 
-wakeups of each task of the benchmark. According by theese informations, it is possible 
-compute average scheduling latency and AET of each task.
-With function graph tracer it is possible calculate AET of each
-call of a certain kernel functions. Also in this case, a bash script launches
+Before to launch "start" signal for the first sample, monitor enables sched\_switch tracer. 
+Output of tracer is a file that shows timestamps of context switches and
+wakeup of each task of the benchmark. According by theese informations, it is possible
+compute average scheduling latency and AET of each task how? A context switch can put a task in execution or in wait status 
+Time elapsed between two consecutive context switches that before put a task in execution and then put it in wait is an execution time,
+time elapsed between adjacent wakeup event of a task and context switch that put it in execution is a scheduling latency.
+
+With funcgraph tracer it is possible calculate AET of a call of a certain kernel functions. Also in this case, a bash script launches
 benchmark with monitor, that enables funcgraph tracer before to send "start" signal
-for the first benchmark sample. Output of tracer is a file that shows execution time employed by each
+for the first sample. Output of tracer is a file that shows execution time employed by each
 kernel function call and other informations such as: context within which function is called,
 cpu that executed function etc..
-According by theese informations, it is possible compute AET of each 
-function call. 
+According by theese informations, it is possible compute AET of each function call.
 
 It is clear that for each measure, it is necessary to launch benchmark and monitor by 
 a bash script used as wrapper, in this way, produced data are managed by wrapper in order
 to produce graphics, png etc..
-In the toolchain there is one main test. We call main test a bash script that 
+In the toolchain there is one \textbf{main test}. We call \textbf{main test} a bash script that 
 performs different measures, in plain words: a scripts that call more than one
-scripts that wraps benchmark and monitor. Main test present in toolchain 
-is called "Performace test" (ptest for briefly)
+scripts that wraps benchmark and monitor. We call \textbf{measure\_script} any bash script called
+by a main test that wrap benchmark and monitor and produce graphics and statistics, this type of script has \_bench.sh as suffix. 
+Main test present in toolchain is called "Performace test" (ptest for briefly)
 and it is implemented in run.sh. In the third section is explained how it works. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,7 +142,7 @@ TODO insert here figure of toolchain structure
 \begin{description}
 	\item[bmarks] folder that contains benchmark binaries 
 	\item[images] folder that contains kernel images to test
-	\item[scripts] folder that contains bash scripts to produce graphics and execute benchmark
+	\item[scripts] folder that contains all bash scripts and measure\_script used in the toolchain
 	\item[results] folder that contains data produced
 	\item[log] folder that contains test log files
 \end{description}
@@ -165,36 +156,36 @@ Name of new folder is composed by date\_of\_today-version\_localversion of kerne
 In this folder it will be created theese directories:
 
 \begin{description}
-	\item[data:] contains text files produced by different scripts called by main test executed
+	\item[data:] contains text files produced by different measure\_script called
 	\item[graphs:] contains plot files generated according to the files present in data folder
-	\item[png:] contains png files produced by different scripts called by main test executed
+	\item[png:] contains png files produced by different measure\_script called
 \end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{ptest functioning}
 
-ptest is main test that measures AET of a sample, AET of each task, load/store 
+ptest is the main test that measures AET of a sample, AET of each task, load/store 
 miss rate of benchmark, AET of kernel functions.
 
 As I said above, user can edit parameters of ptest modifing a configuration file (init.env).
 In this file are contained all parameters that describe structure of toolchain, name of files
-used to reboot system and select kernel to test and parameters used to configure main test
-ptest. For a detailed description of each parameter see init.env
+used to reboot system and select kernel to test and parameters used to configure ptest. 
+For a detailed description of each parameter see init.env
 User can modify init.env manually or automatically using init_env.sh.
 In init_env.sh there are four execution profile for ptest:
 \begin{description}
 	\item[default] standard execution of ptest
-	\item[performance] only bash scripts used to measure performance of benchmark are enabled 
-	\item[function] only bash scripts used to measure performance of kernel function are enabled
+	\item[performance] only measure\_script used to measure performance of benchmark are enabled 
+	\item[function] only measure\_script used to measure performance of kernel function are enabled
 	\item[experimental] user can specify what he wants
 \end{description}
 
 User is strongly encouraged to use init_env.sh to modify configuration file, for two reasons:
-this procedure speed up editing of init.env and it prevent user to make any mistake, because init_env.sh
+this procedure speed up editing of init.env and it prevent user from making any mistake, because init_env.sh
 edit parameters related to execution of ptest, in this way structure of toolchain or name of different
-files used aren't touched. 
-Most important parameters used to configure ptest, they are:
+files used aren't touched.
+Most important parameters used to configure ptest are:
 
 \begin{description}
 	\item[DIM\_LIST:] it is the list of buffer dimensions to use in benchmark
@@ -204,60 +195,43 @@ Most important parameters used to configure ptest, they are:
 we call NR\_DIM number of elements present in DIM\_LIST.
 ptest follows this steps:
 
+TODO flowchart del ptest
+TODO guarda whatever cosa vuol dire
+
 \begin{description}
 	\item[Step1:] User specifies in init\_env.sh which desired execution profile
 and execute init\_env.sh to configure init.env 
 For example: User select deafault profile that set NR\_TRY\_PERFORMANCE\_TEST=10 and DIM\_LIST="4 8 16 32"
 Pay attention to theese data, because they are taken as reference for next steps
 	\item[Step2:] launch run.sh. This script, enter in a loop and for 
-NR\_TRY\_PERFORMANCE\_TEST iterations executes enabled scripts. Each script, whatever it measures, 
-receive as input paramters: number of iteration in execution, name of bencmark to execute, buffer dimension to use in benchmark. 
+NR\_TRY\_PERFORMANCE\_TEST iterations executes enabled scripts. Each measure\_script, whatever it measures,
+receives as input paramters: number of iteration in execution, name of bencmark to execute, buffer dimension to use in benchmark. 
 Then it launches benchmark with buffer dimension received. In our case 
-at the first tim with 4, then with 8 and so on, therefore each script is executed 
+it launch benchmark with 4KB, then with 8KB and so on, therefore each measure\_script is executed 
 NR\_TRY\_PERFORMANCE\_TEST x NR\_DIM. 
-	\item[Step3:] build bar graphs. A script read data in data folder,
-builds bar graphics and put them in graphics folder. Details about graphics are
-in the next section
+	\item[Step3:] build bar graphs. A script read data in data folder, builds bar graphs and put them in graphics folder. 
+Theese bar graphs present data related only to kernel tested. Details about graphs are in the next section
 	\item[Step4:] select another kernel to test, update .status_bench and .running_bench, reboot system and go to Step2 
 until all kernel in image folder are tested.
-	\item[Step5:] build global graphics. According data in different data folders
-created, builds "global" graphics
+	\item[Step5:] build final bar graphs. According to data related to all tested kernel, all necessary bar graphs are built 
 
 \end{description}
 
 .status_bench and .running_bench are used by a deamon that at boot of system, continue execution of ptest 
-Only thing at which user has to pay attention is to launch run.sh, only if kernel in use at that moment
+Only thing at which user has to pay attention is to launch run.sh, only if kernel in use in that moment
 is a kernel to test, for example if kernel to test are k_1, k_2 and k_3, kernel in use 
-must be on of theese.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Produced data and graphics}
-
-TODO metti una descrizione pi\'u ampia nella introduction
-
-The toolchain can generate two type of bar graphs: they are "per dimension" and "per task". First type has on x axis buffer dimensions used.
-Latter type has names of thread used in benchmark. Bar graphs are generated using \textbf{bargraph.pl}, a perl script 
-that receive a text file that contains informations about title of graph, labels of axes, information related visualization of graph with gnuplot or 
-other tools and obiouvsly data used to generate bar graph (see TODO url del bragraph for more details). File used by bargraph.pl is generated by
-a bash script 
-
-After execution of benchmark, each bash script used in ptest elaborates data given by benchmarks and insert computed values in a text file that 
-now we call for briefly STATS\_FILE. This file will contains data and informations used by bargraph.pl to generate bar graph. Details on 
-STATS\_FILE will be given in section.
-When all bash scripts used un ptest finish their job, bash script used to generate file used by bargraph.pl is called. This script  perform for each STATS\_FILE generated a SQL-like query in order to retrieve data used to build bar graph. This procedure is executed for each STATS\_FILE and 
-for each kernel tested. In this way, for each bar graph there will be a list of buffer dimension or a list of task name on x axis and for each element 
-on x axis, there will be a number of column equal to number of kernel tested.
+must be one of theese.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Scripts structure and file formats}
 
-ptest calls different bash scripts to perform its measures. Each script receives in input:
+Each measure\_script receives in input theese parameters:
 
 \begin{enumerate}
 	\item binary of benchmark to execute
 	\item number of main test iteration
-	\item dimension to use in benchmark
+	\item buffer dimension used by benchmark
 \end{enumerate}
 
 and it follows this structure:
@@ -265,11 +239,8 @@ and it follows this structure:
 TODO metti il codice di un prototipo dello script
 
 In the section 1), script imports configuration file to set up environment variables
-that it use.
 
 In the section 2), there is managing of input parameters and help for user.
-As I said above, script interface is fixed and is composed by the parameteres previously
-listed.
 
 In the section 3), there is declaration of files produced by script.
 A script can produce all files it wants, but it must produce the file declared in
@@ -277,19 +248,25 @@ STATS\_FILE.
 
 In the section 4), there are definitions of headers used to generate bar graphs.
 
-An header is composed by theese tags:
+Bar graphs generated are of two types: they are "per dimension" and "per task". First type has on x axis buffer dimensions used.
+Latter type has on x axis names of thread used in benchmark. Bar graphs are generated using \textbf{bargraph.pl}, a perl script
+that receive a text file that contains informations about title of graph, labels of axes, information related to visualization of graph with gnuplot or 
+other tools and obiouvsly data used to generate bar graph (see TODO url del bragraph for more details). File used by bargraph.pl is generated by
+a bash script 
+
+An header in STATS\_FILE is composed by theese tags:
 
 <TITLE>"Title of a bar graph"
 <XLAB>"Label for x axis of a bar graph"
 <YLAB>"Label for y axis of a bar graph"
-<PREFIX\_PLOT>"name of file that contain data for a 'local' bar graphic"
+<PREFIX\_PLOT>"name of file that contain data for a 'local' bar graphic" 
 <AVG\_COL\_TAG>"index of column that contains average values"
 <VAR\_COL\_TAG>"index of column that contains variance values"
 
-Data contained in header will be used to generate file for bargraph.pl. At each header corresponds one bar graph, a STATS\_FILE can
+Data contained in header will be read by a bash script to generate file for bargraph.pl. At each header corresponds one bar graph, a STATS\_FILE can
 contains more than one header. Each script decides how many headers put in STATS\_FILE, and then how bar graphs to generate.
-It is clear what each tag represents, but it's not immediate to understand how to use <AVG\_COL\_TAG> and <VAR\_COL\_TAG>. Now it's enough to know that
-they are related to SQL-like query seen in previous section.
+It is clear what each tag represents, but it's not immediate to understand how to use <AVG\_COL\_TAG> and <VAR\_COL\_TAG>, I will explain their 
+use soon. PREFIX\_PLOT is not important to understand workflow for building bar graph.
 
 In the section 5), script writes necessary headers in STATS\_FILE.
 
@@ -302,58 +279,79 @@ Each measure is inserted in a row tagged with <QUERY\_TAG>. A row follows this f
 <QUERY\_TAG>Average = "value" Variance = "value" Min = "value" Max = "value" \textit{other_values}
 ....
 
-TODO quando dico bash script e intendo i\_bench.sh forse \'e meglio chiamarli measure_script
-
-I will explain what contains QUERY\_TAG soon, now pay attention at how a bash script make a measure.
-A bash script executes benchmark and enables tools needed to measure what it has to measure.
-Theese tools can be sched_switch tracer, perf, monitor etc... and each of them produce a different output. Within a bash script,
-a suitable awk script is called to elaborate output of theese tools and produce a generic list of values, then bash script computes average and variance
-of theese values and then it arranges theese statistics in format showed above. Each bash script called in ptest analyzes at least a list of data, 
-we call it "principal list", but some scripts have to do with more than one list, this fact depends from type
-of file analyzed (perf output file, sched_switch tracer file etc..). For example: trace_bench.sh analyzes trace file produced
-by sched_switch tracer. From this file, it extracts two lists and a scalar value related to each task: list of exec. time, list of scheduling
-latency and number of migration.
+I will explain what contains QUERY\_TAG soon, now pay attention at how a measure is performed.
+A measure\_script executes benchmark and enables tools needed to make measures.
+Theese tools can be sched_switch tracer, perf, monitor etc... and each of them produce a different output. Within a measure\_script,
+a suitable awk script is called to elaborate output of theese tools and to produce a generic list of values, then the script computes 
+average and variance of theese values and then it arranges theese statistics in format showed above. Each measure\_script analyzes 
+at least a list of data, we call it "principal list", but some scripts have to do with more than one list, this is 
+what \textit{other_values} indicates. This fact depends from type of file analyzed (perf output file, sched_switch tracer file etc..). 
+For example: trace_bench.sh analyzes trace file produced by sched_switch tracer. From this file, it extracts two lists of values and a 
+scalar value related to each task: list of exec. time, list of scheduling latency and number of migration.
 Average and variance computed according to "principal list" are put respectively after "Average =" and "Variance =", while other computed values are
-organized in arbitrary format decided within the script (\textit{other_values} indicates that in a row it is possible to have more than "standard" data)
+organized in arbitrary format decided within the script. 
 
-QUERY\_TAG is used to perform SQL-like query necessary to build file for bargraph.pl. To understand how this tag works, we examine procedure to build
-a "per dimension" bar graph. Considering example seen in section 1 TODO ref all'esempio.
+QUERY\_TAG is used to perform a "SQL-like query" necessary to build file for bargraph.pl. To understand how this tag works, we examine
+procedure to build a "per dimension" bar graph. Considering example seen in section 1 TODO ref all'esempio.
 Each script is executed 40 times (NR\_TRY\_PERFORMANCE\_TEST x NR\_DIM), and for each iteration
 it writes an entry in its own STATS\_FILE, therefore there are 10 entries for each
-dimension in DIM\_LIST. For this type of graph QUERY\_TAG has this format:
+dimension in DIM\_LIST. For this type of bar graph QUERY\_TAG has this format:
 
 <buffer\_dim> where buffer\_dim is the dimension received in input by the script in execution
 (and consequently used in benchmark)
 
-in this way, it is easy select entries of each dimension, there will be 10 entries for each 
-dimension considered, pick value at column indicates by AVG\_COL\_TAG and by VAR\_COL\_TAG
-and compute mean of theese 10 values. In this way we have two values: first is mean
+in this way, it is easy select entries for each dimension, pick values at columns indicates by AVG\_COL\_TAG and by VAR\_COL\_TAG
+and compute mean of them. In this way we have two values: first is mean
 of averages and the latter is the mean of variances. Repeat this procedure for each dimension and finally we
-will have NR\_DIM average and NR\_DIM variance. Note that a column in an entry is delimited by
-a white space, therefore value of Average is in column 3, value of variance is in column 6 and so on.
-In plain words, procedure is very similar to a SQL-like query.
-Now it is clear the use of AVG\_COL\_TAG and by VAR\_COL\_TAG, they represent the index of columns used
-in the projection of the query.
+will have NR\_DIM averages and NR\_DIM variances, to insert in a bar graph. Averages are the measures and variances represents measurement 
+errors made. This procedure is repeated for each kernel tested and for each header present in the various STATS\_FILE, 
+in this way, each bar graph generated will have, for each dimension, a number of column equal 
+to number of kernel tested. Note that each value presents in an entry in STATS\_FILE is delimited by a white space, therefore value of 
+Average is in \textbf{column} 3, value of Variance is in \textbf{column} 6 and so on.
+In plain words, procedure is very similar to a "SQL-like query".
+Now it is clear the use of AVG\_COL\_TAG and by VAR\_COL\_TAG, they represent the indexes of columns used
+in the projection of the query. 
 
 Procedure to build "per task" graph is the same, but in this case QUERY\_TAG has this format: 
 <buffer\_dim><task\_name> in this case we group values according task name and buffer dimension
 
-
-As mentioned before, for some script, an entry in STATS\_FILE presents aditional informations 
-and not only "standard" data. When in STATS\_FILE, AVG\_COL\_TAG and VAR\_COL\_TAG indicates different indexes, our average
-and variance values are means of two different list of values, as showed above. But if indexes are equal, namely
-they indicates the same column, mean value computated is the average of a list of values, variance
-is the variance of a list of values and not the mean as in previous case.
+AVG\_COL\_TAG and VAR\_COL\_TAG can indicates different indexes, as seen above, or equal indexes in STATS\_FILE. When indicates 
+\textbf{different} indexes, our average and variance values are means of two different list of values, as showed above. But if indexes 
+are equal, namely they indicates the same column, mean value computated is the average of a list of values, variance is the variance of 
+a list of values and not the mean as in previous case. To know what and how each measure_script measures, see code of each script.
 
 
-TODO use case su come introdurre nuove misure
-Structure of the measure_script is quite flexible, if a new measure is introduced in ptest, 
-the only thing to pay attention is how to 
-"..ci vuole una nota che dica che il numero di colonna va riportato in init.env..." lo metto sempre nello use case
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Use cases}
 
-TODO alla fine parla di come si può rendere più flessible la toolchain
-dicendo che se uno usa un altro benchmark può farlo purchè produca una lista
-di valori di qualunque natura essi siano: tempi percentuali ec..
+The most important use cases are:
+\begin{enumerate}
+	\item Insert a new kernel to test:
+	To insert a new kernel to test it's enough to follow theese steps:
+	\begin{description}
+		\item[Step1:] compile new kernel
+		\item[Step2:] install new kernel
+		\item[Step3:] copy initrd and vmlinuz generated in images folder
+	\end{description} 
+	\item Make a new measure\_script:
+
+To make a new measure\_script is easy, because its structure is quite flexible. As previously seen, a measure\_script has a fixed 
+interface, and it must contains a file defined in STATS\_FILE. How many headers for bar graphs and files to use is decided by user.
+Until now only one benchmark is used to make measures. It possible to use any benchmark that respects this condition: at the end of benchmark
+it must be available a list of number, in this way it's possible to use tool provided by the toolchain to compute average, variance
+and other statistics values to make a measure that respects format seen in the previous section.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{compilare il benchmark serve l'appendice qui}
+
+Buffer dimension used by benchmark is decided at compile time by configuring the suitable Makefile.
+It is generated an executable file for each buffer dimension selected, for example if you choose 4 
+dimensions there will be generated 4 executable files, and each of theese binary files will contain
+buffer dimension used in its name. When a measure\_script must execute a benchmark that use a buffer of X KB, it executes binary file 
+with "X KB" in its name.
+For a detailed description of how to compile benchmark see Makefile
 
 
 % We suggest the use of JabRef for editing your bibliography file (Report.bib)
