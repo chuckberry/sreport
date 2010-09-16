@@ -65,6 +65,7 @@ Matr. 724626\\
 \hspace{10ex}
 
 \begin{myabstract} Abstract \end{myabstract}
+
 Multicore architectures, which contain multiple processing cores on a single chip, have been adopted by most chip manufacturers.
 Dual-core chips are commonplace, and numerous four- and eight-core options exist. In the coming years, per-chip core counts will continue to increase.
 The major obstacle to use multicores for real-time applications is that we may not predict and provide any guarantee on real-time properties of embedded software on such platforms; the way of handling the on-chip shared resources such as L2 cache may have a significant impact on the timing
@@ -76,18 +77,33 @@ predictability. For this reason, it is necessary introduce new scheduling algori
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
+TODO qui non faccio cenni a come sono fatte le architetture, lo metto nel report delle cache
+
+Multicore architectures, which contain multiple processing cores on a single chip, have been adopted by most chip manufacturers.
+Dual-core chips are commonplace, and numerous four and eight core options exist. In the coming years, per-chip core counts will continue to
+increase for example, Sun plans to ship its 16-core "Rock" processor by the end of 2009, and Intel has claimed that it will release 80-core
+chips as early as 2013. The shift to multicore technologies is a watershed event, as it fundamentally changes the "standard" computing
+platform in many settings to be a multiprocessor. In most multicore platforms, different cores share onchip caches. Without effective
+management by the scheduler, such caches can cause thrashing that severely degrades system performance. In fact, the issue of efficient cache
+usage on multicore platforms is one of the most important problems with which chip makers are currently grappling.
+It is predicted that multicores will be increasingly used in future embedded systems for high performance and low energy consumption. The
+major obstacle is that we may not predict and provide any guarantee on real-time properties of embedded software on such platforms due to the on-chip
+shared resources. Shared caches such as L2 or L3 cache are among the most critical resources on multicores, which severely degrade the timing
+predictability of multicore systems due to the cache contention between cores. For single processor systems, there are well-developed techniques 
+for timing analysis of embedded software. Using these techniques, the worst-case execution time (WCET) of real-time tasks may be estimated, and
+then used for system-level timing analyses like schedulability analysis. One major problem in WCET analysis is how to predict the cache behavior,
+since different cache behaviors (cache hit or miss) will result in different execution times of each instruction.
+Unfortunately the existing techniques for single processor platforms are not applicable for multicores with shared caches. The reason is
+that a task running on one core may evict the useful L2 cache content belonging to a task running on another core and therefore the
+Worst-Case Execution Time (WCET) of one task can not be estimated in isolation from the other tasks as for single processor systems. 
+Essentially, the challenge is to model and predict the cache behavior for concurrent programs (not sequential programs as for the case of 
+single processor systems) running on different cores.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{The Second Section}
+\section{The first section: scheduling model}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.  Aenean magna. Nunc non
-ante eget nibh condimentum tempor. Nullam ullamcorper lectus eget mauris. Nam
-neque orci; rhoncus at, pulvinar quis, elementum sit amet, turpis. Mauris
-posuere nisi ut justo. Morbi non lorem vitae mauris interdum faucibus.
-Vestibulum ut sapien in augue faucibus fringilla. Vestibulum ante ipsum primis
-in faucibus orci luctus et ultrices posuere cubilia Curae; Etiam vestibulum
-fringilla libero. Curabitur libero diam, hendrerit sit amet, ornare eget,
-imperdiet vel, purus!
+
+
 
 
 % We suggest the use of JabRef for editing your bibliography file (Report.bib)
