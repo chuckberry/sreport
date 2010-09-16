@@ -102,9 +102,117 @@ single processor systems) running on different cores.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The first section: scheduling model}
 
+In this section, we briefly describe the basic assumptions on the hardware platform and application tasks, which model is based on
 
+%-----------------------------------------------------------------------------
+\subsection{The first subsection of the first}
 
+We assume a multicore containing a fixed number of processor cores sharing an on-chip cache. Note that this is usually an L2 cache. We 
+will not explicitly model core-local caches (usually L1) or other shared resources like interconnects. Since concurrent accesses to the shared 
+cache give raise to the problem of reduced predictability due to cache interference, we assume the existence of a cache partitioning 
+mechanism, allowing to divide the cache space into non-overlapping partitions for independent use by the computation tasks, TODO ref alla fig.
+see Figure 1(a).
+Assuming a k-associative cache that consists of l cache sets with k cache lines each, one can distinguish set-based and associativity-base
+partitioning. The first one is also called row-based partitioning and assigns different cache sets to different partitions. It therefore enables
+up to l partitions and is thus quite fine-grained for bigger caches. The second one assigns a certain amount of lines within each cache set 
+to different partitions and is also called column-based partitioning, so it is rather coarse-grained with a maximum of just k partitions. 
+Mixtures of both variants are also possible. TODO metti una roba del tipo "tra i p\'u famosi cache partitiong approcci ricordiamo il cache coloring"
 
+%-----------------------------------------------------------------------------
+\subsection{The second subsection of the first}
+
+Assume a multicore platform consisting of $M$ cores and $A$ cache partitions, and a set $\tau$ of independent sporadic tasks
+whose numbers of cache partitions (cache space size needed) and WCETs are known for the platform. We use $\tau_i = \langle A_i,C_i,D_i,T_i \rangle$
+to denote such a task where $A_i$ is the \textit{cache space size}, $C_i$ is the \textit{worst-case execution time} (WCET), $D_i \le Ti$ is the 
+relative deadline for each release, and $T_i$ is the minimum inter-arrival separation time also referred to as the period of the task. We further assume
+that all tasks are ordered by priorities, i.e., $\tau_i$ has higher priority than $\tau_j$ iff $i < j$. The \textit{utilization} of a task $\tau_i$ is
+$U_i = C_i/T_i$ and its slack $S_i = D_i - C_i$ , which is the longest delay allowed before actually running without missing its
+deadline. A sporadic task $\tau_i$ generates a potentially infinite sequence of \textit{jobs} with successive job-arrivals separated by at least $T_i$
+time units. The $\alpha^{th}$ job of task $\tau_i$ is denoted by $J_{i}^\alpha$, so we can denote a job sequence of task $\tau_i$
+with $(J_{i}^1; J_{i}^2;\dots{})$. We omit $\alpha$ and just use $J_i$ to denote a job of $\tau_i$ if there is no need to identify which job it is. Each
+job $J_i$ adheres to the conditions $A_i$, $C_i$ and $D_i$ of its task $\tau_i$ and has additional properties concerning \textit{absolute time points} 
+related to its execution, which we denote with lower case letters: The \textit{release time}, denoted by $r_i$, the deadline, denoted by $d_i$
+and derived using $d_i = r_i + D_i$, and the latest start time, denoted by $l_i$ and derived using $l_i = r_i + S_i$.
+Finally, without loosing generality, we assume that time is dense in our model.
+
+%-----------------------------------------------------------------------------
+\subsection{The thrird subsection of the first: Lp formulation}
+
+The LP formulation will use the following constants:
+\begin{itemize}
+	\item $M$: the number of cores.
+	\item $A$: the total number of partitions on the shared cache.
+	\item $A_{i}$: the number of cache partitions occupied by each task $\tau_{i}$. (We also use the constant $A_{k}^{max}$, which is 
+		     derived from these as above.)
+	\item $I_{k}^i$: an upper bound of the interference by i in the problem window, which is computed as for each i.
+\end{itemize}
+
+Further, the following non-negative variables are used:
+
+\begin{itemize}
+ 	\item $\alpha_i$: for each task $\tau_i$, we dene $\alpha_i$ as $\tau_i$'s accumulated execution time during $\beta$-intervals.
+\end{itemize}
+
+During the intervals, all $M$ cores are occupied. Further, we know that sum i i equals to the total computation work of $\sum_{i} \alpha_i$
+all tasks during the intervals (which is the area with grids in Figure 5). We can therefore express the accumulated
+length of all $\alpha$-intervals as:
+
+\begin{center} $\frac{1}{M} \sum_{i} \alpha_i$ \end{center}
+
+During the $\beta$-intervals, at least $A - A_{k}^{max} + 1$ cache partitions are occupied. Further, $\sum_{i} A_{i}\beta_{i}$ is the total is 
+the total cache partition use of all tasks during the $\beta$-intervals (which is an upper bound of the area with diagonals in Figure 5). We
+can therefore express an upper bound of the accumulated length of all $\beta$-intervals as:
+
+\begin{center} $\frac{1}{A - A_{k}^{max} + 1}\sum_{i}A_{i}\beta_{i}$ \end{center}
+
+Since $J_{k}$ is not schedulable, we further know that the sum of the accumulated lengths of the $\alpha-$ and $\beta$-intervals is at 
+least $S_{k}$. Thus, using the expressions from (4) and (5), must hold that:
+
+\begin{center}
+\begin{equation*}
+\sum_{i} \Bigl( \frac{1}{M}\alpha_{i} + \frac{A_{i}}{A - A_{k}^{max} + 1}\beta_{i}\Bigr) \ge S_{k}
+\end{equation*}
+\end{center}
+
+We can use an LP solver to detect whether the i and variables can be chosen in a way to satisfy this condition.
+If this is not the case, then k would be schedulable. We can use the object function of our LP formulation for that check:
+
+\begin{center}
+\begin{equation*}
+Maximize \sum_{i} \Bigl( \frac{1}{M}\alpha_{i} + \frac{A_{i}}{A - A_{k}^{max} + 1}\beta_{i}\Bigr)
+\end{equation*}
+\end{center}
+
+Thus, if the solution of the LP problem is smaller than $S_{k}$ we can determine that k is schedulable.
+So far, the variables i and i are not bounded, so without further constraints, the LP formulation will not have a bounded solution (which 
+would trivially render all tasks unschedulable). Therefore, we add constraints on the free variables, that follow directly from the structure 
+of our schedulability problem. We have three constraints:
+
+\begin{description}
+\item[$\varphi_{1}$: Interference Constraint] We know that $I_{k}^j$ is the upper bound of the work done by $\tau_{j}$ in the problem 
+window, so we have:
+\begin{center} $\forall j: \alpha_{j} + \beta_{j} \le I_{k}^j$ \end{center}
+
+\item[$\varphi_{2}$: Core Constraint] The work done by a task in the intervals can not be larger than the total accumulated length of the intervals
+(see Expression (4)), so we have: 
+\begin{center} $\forall j: \alpha_{j} \le \frac{1}{M} \sum_{i} \alpha_i$ \end{center}
+
+\item[$\varphi_{2}$: Cache Constraint] 3: Cache Constraint The work done by a task in the intervals can not be larger than the total accumulated
+length of the intervals. Thus, it can not be larger than the upper bound of the total length of the intervals (see Expression (5)), so we have:
+
+\begin{center} $\forall j: \beta_{j} \le \frac{1}{A - A_{k}^{max} + 1} \sum_{i}A_{i}\beta_{i}$ \end{center}
+
+\end{description}
+
+To test $\tau_{k}$ for schedulability, we can now invoke an LP solver on the LP problem dened by constraints $\phi_{1}$ to $\phi_{3}$ and the 
+object function in (7). By construction, we have a first schedulability test for $\tau$:
+
+TODO magari lo tolgo sto teorema 
+Theorem 1 (The First Test). For each task k, let
+k denote the solution of the LP problem shown above. A 
+task set is schedulable by FPCA, if for each task k 2 it 
+holds that
+k < Sk:
 
 % We suggest the use of JabRef for editing your bibliography file (Report.bib)
 \bibliographystyle{splncs}
