@@ -68,8 +68,22 @@ Matr. 724626\\
 
 Multicore architectures, which contain multiple processing cores on a single chip, have been adopted by most chip manufacturers.
 Dual-core chips are commonplace, and numerous four- and eight-core options exist. In the coming years, per-chip core counts will continue to increase.
-The major obstacle to use multicores for real-time applications is that we may not predict and provide any guarantee on real-time properties of embedded software on such platforms; the way of handling the on-chip shared resources such as L2 cache may have a significant impact on the timing
-predictability. For this reason, it is necessary introduce new scheduling algorithms that consider how scheduled tasks use shared cache, in briefly it is necessary  to develop "cache-aware" scheduling algorithms. In this report, we show a model that represents cache-aware scheduling problem and some examples of cache-aware scheduling algorithms.
+The major obstacle to use multicores for real-time applications is that we may not predict and provide any guarantee on real-time properties 
+of embedded software on such platforms; the way of handling the on-chip shared resources such as L2 cache may have a significant impact on the timing
+predictability.
+
+Recent works show how with a proper use of shared resource such as L2, it is possible improve predictability of tasks in order to perform 
+system-level schedulability analysis for multicore systems based on task-level timing analysis us-ing existing WCET analysis techniques.
+For this reason, it is necessary introduce new scheduling algorithms that consider how scheduled tasks use shared cache, in briefly 
+it is necessary to develop "cache-aware" scheduling algorithms.
+
+TODO quello che dimostra il modello LP è che è possibile usare queste timing techniques se si usa una partizionamento della L2
+
+In this report, we show some examples of cache-aware scheduling algorithms and we show basic assumptions they are based on 
+
+TODO sta cosa del linear problem non mi piace va scritta meglio, perchè risolvere quel problema vuol dire ricavare gli alfa e i beta (cioè dei tempi)
+e quindi ci si riporta alla storia della timing analysis
+and a linear model that describe the cache-aware scheduling problem, so when a task can be scheduled by this type of scheduling.
 
 \vspace{4ex}	% Please do not remove or reduce this space here.
 \begin{multicols}{2}
@@ -77,32 +91,34 @@ predictability. For this reason, it is necessary introduce new scheduling algori
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-TODO qui non faccio cenni a come sono fatte le architetture, lo metto nel report delle cache
-
 Multicore architectures, which contain multiple processing cores on a single chip, have been adopted by most chip manufacturers.
 Dual-core chips are commonplace, and numerous four and eight core options exist. In the coming years, per-chip core counts will continue to
-increase for example, Sun plans to ship its 16-core "Rock" processor by the end of 2009, and Intel has claimed that it will release 80-core
-chips as early as 2013. The shift to multicore technologies is a watershed event, as it fundamentally changes the "standard" computing
-platform in many settings to be a multiprocessor. In most multicore platforms, different cores share onchip caches. Without effective
-management by the scheduler, such caches can cause thrashing that severely degrades system performance. In fact, the issue of efficient cache
+increase for example, Intel has claimed that it will release 80-core chips as early as 2013. The shift to multicore technologies is a 
+watershed event, as it fundamentally changes the "standard" computing platform in many settings to be a multiprocessor. In most multicore 
+platforms, different cores share onchip caches. Without effective management by the scheduler, such caches can cause thrashing that 
+severely degrades system performance. In fact, the issue of efficient cache
 usage on multicore platforms is one of the most important problems with which chip makers are currently grappling.
 It is predicted that multicores will be increasingly used in future embedded systems for high performance and low energy consumption. The
 major obstacle is that we may not predict and provide any guarantee on real-time properties of embedded software on such platforms due to the on-chip
 shared resources. Shared caches such as L2 or L3 cache are among the most critical resources on multicores, which severely degrade the timing
-predictability of multicore systems due to the cache contention between cores. For single processor systems, there are well-developed techniques 
-for timing analysis of embedded software. Using these techniques, the worst-case execution time (WCET) of real-time tasks may be estimated, and
-then used for system-level timing analyses like schedulability analysis. One major problem in WCET analysis is how to predict the cache behavior,
-since different cache behaviors (cache hit or miss) will result in different execution times of each instruction.
+predictability of multicore systems due to the cache contention between cores. For single processor systems, 
+\textbf{there are well-developed techniques for timing analysis of embedded software}. Using these techniques, the worst-case execution time 
+(WCET) of real-time tasks may be estimated, and then used for system-level timing analyses like schedulability analysis. One major problem in 
+WCET analysis is how to predict the cache behavior, since different cache behaviors (cache hit or miss) will result in different 
+execution times of each instruction.
+
 Unfortunately the existing techniques for single processor platforms are not applicable for multicores with shared caches. The reason is
 that a task running on one core may evict the useful L2 cache content belonging to a task running on another core and therefore the
 Worst-Case Execution Time (WCET) of one task can not be estimated in isolation from the other tasks as for single processor systems. 
 Essentially, the challenge is to model and predict the cache behavior for concurrent programs (not sequential programs as for the case of 
 single processor systems) running on different cores.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The first section: scheduling model}
 
-In this section, we briefly describe the basic assumptions on the hardware platform and application tasks, which model is based on
+In this section, we briefly describe the basic assumptions of the hardware platform and application tasks, considered to develop cache-aware 
+scheduling algorithms
 
 %-----------------------------------------------------------------------------
 \subsection{The first subsection of the first}
@@ -136,7 +152,47 @@ and derived using $d_i = r_i + D_i$, and the latest start time, denoted by $l_i$
 Finally, without loosing generality, we assume that time is dense in our model.
 
 %-----------------------------------------------------------------------------
-\subsection{The thrird subsection of the first: Lp formulation}
+\subsection{The third subsection of the first: Cache-aware scheduling}
+
+TODO: le assunzioni sono fatte, adesso descrivo il pattern generale seguito dagli scheduler dei paper, che è quello del modello teorico
+TODO: cos\'i a gratis posso concludere il capitolo con il modello LP
+
+TODO: Cosa dire: 
+According to assumptions made, now it is possible to present the general pattern followed by all cache-aware scheduling algorithms analyzed.
+All algorithms analyzed are nothing special. They have all characteristics of classic scheduling algorithms, such as priority inheritance, 
+fixed priority etc.. and in addition they take care about what is memory region used by scheduled tasks
+Analyzed algorithms are non-preemptive scheduling.
+
+They follow theese rules: a job $J_i$ is scheduled for execution if:
+
+\begin{enumerate}
+	\item $J_i$ is the job of highest priority among all waiting jobs,
+	\item There is at least one core idle
+	\item There are enough cache partitions, i.e. at least $A_i$ , are available.
+\end{enumerate}
+  
+Note that, since we suppose $D_i \le T_i$ for each task, there is at most one job of each task at any time instant.
+
+TODO metti la fig 2 del LP
+
+Figure 2 shows an example of the task set in Table 1 scheduled by this type of algorithms (the scenario that all tasks are released
+together). Note that at time 0, the job $J_{4}^1$ can not execute according to the definition of the algorithm, although it is ready and
+there is an idle core and enough idle cache partitions to fit it, since it is not at the first position of the waiting queue,
+i.e. there is a higher priority job ($J_{1}^3$) waiting for execution. $J_{1}^3$ can not execute since there is not enough idle cache
+partitions available. Thus, we note that FPCA may waste resources as it does not schedule lower priority ready jobs to execute in advance of 
+higher priority ready jobs even though there are enough resources available to accomodate them.
+
+
+TODO dico una roba del tipo: gli algor visti si differenziano per il profiling o per il coschedule
+
+
+
+
+%-----------------------------------------------------------------------------
+\subsection{The fifth subsection of the first: Lp formulation}
+
+TODO questa subsec va alla fine dove dir\'o un vantaggio di qeusti algor. \'e che la predicib. aumenta e si pu\'o usare il modello LP 
+TODO del paper ec..
 
 The LP formulation will use the following constants:
 \begin{itemize}
