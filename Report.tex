@@ -76,17 +76,29 @@ predictability.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
+LOGIC: nel paragrafo si accenna a come i multicore stanno spopolando (Calandrino)
+
 Multicore architectures, which contain multiple processing cores on a single chip, have been adopted by most chip manufacturers.
 Dual-core chips are commonplace, and numerous four and eight core options exist. In the coming years, per-chip core counts will continue to
 increase for example, Intel has claimed that it will release 80-core chips as early as 2013. The shift to multicore technologies is a 
 watershed event, as it fundamentally changes the "standard" computing platform in many settings to be a multiprocessor. 
 
+LOGIC: nel paragrafo si accenna a come l\'uso sbagliato della cache degradi le performance dei fair task (Kim Chandra e paper Intel)
+
 In most multicore platforms, different cores share onchip caches, usually is L2 or L3 cache. Recent research works show how an unfair cache sharing 
-among concurrent tasks degrades performance. Modern operating systems (OS), attempt to schedule threads in a fair and low-overhead manner. 
+among concurrent tasks and cache trashing degrades performance. Modern operating systems (OS), attempt to schedule threads in a 
+fair and low-overhead manner.
 Most simply, they balance the load across processor by migrating task to keep the run queues approximately equal. An OS assumes that, 
 in a given timeslice, resource sharing uniformly impacts the rates of progress of all the co-scheduled threads. 
 Unfortunately this assumption is often unmet because a thread's ability to compete for cache space is determined by its temporal reuse behavior,
 which is often very different compared to that of other threads which are co-scheduled with it. 
+
+\begin{center}
+	\includegraphics[height=7cm, width=8cm, keepaspectratio]{eps/fig_chandra.eps}
+	\captionof{figure}{gzip's number of cache misses per instruction and instruction per cycle (IPC), when it runs alone compared to when it is 
+co-scheduled with another thread on a 2-processor CMP, sharing an 8-way associative 512-KB L2 cache.}
+	\label{fig:chandra}
+\end{center}
 
 To show the performance problem due to unfair cache sharing and how this phenomena is dependet by co-scheduled threads, Figure 1 shows
 gzip's number of cache misses per instruction and instruction per cycle (IPC), when it runs alone compared to when it is co-scheduled with 
@@ -97,17 +109,13 @@ increases by 9.5x when it runs with art 7.3x and when it runs with swim. As a re
 35$\%$ when gzip runs with apsi, but reduced by 63$\%$ when gzip runs with art. Although not shown in the figure, art, apsi, applu, 
 and swim's cache miss per instruction increases less than 15$\%$ when each of them runs with gzip. This creates a very unfair cache sharing.
 
-
-TODO figura1 del fair cache hsaring cita anche articolo fair cache sharing
-
-
 In terms of fairness, gzip's significant slow down can easily result in \textbf{priority inversion}. 
 For example, if gzip has a higher priority than art, for gzip to achieve a higher progress rate, it has to be assigned more than three times the 
 number of time slices compared to that assigned to art. Otherwise, to the end users, gzip may appear to be starved. In terms of throughput,
 gzip's significant slow down reduces the overall throughput because the utilization of the processor where gzip runs on is also significantly reduced. 
 Furthermore, it is possible that the co-scheduled threads's working sets severely overflow the cache and create a \textit{thrashing} condition.
 
-In briefly, there are at least three problems that can render the OS schedule ineffective.
+In briefly, there are at least three problems that may happen and render the OS schedule ineffective.
 The first problem is \textit{thread starvation}, which happens when one thread fails in competing for sufficient cache space necessary to make 
 satisfactory forward progress. The second problem is \textit{priority inversion}, where a higher priority thread achieves a slower forward
 progress than a lower priority thread, despite the attempt by the OS to provide more timeslices to the higher priority thread.
@@ -118,13 +126,16 @@ rate of a thread is \textit{highly dependent} on the thread mix in a co-schedule
 to characterize or predict, making the system behavior unpredictable. Unfortunately, despite these problems, cache implementations today are 
 thread-blind, producing unfair cache sharing in many cases.
 
+LOGIC: cenno al degrado delle performance legato alle cache per i task RT (Guan Stigge)
+
 Theese problem are related to general purpose systems. In multicore embedded system and in particular in Real-Time systems, unfair cache sharing 
 and cache trashing don't allow to predict and to provide any guarantee on real-time properties of embedded software.
-For single processor systems, \textbf{there are well-developed techniques for timing analysis of embedded software}.
+For single processor systems, there are well-developed techniques for timing analysis of embedded software.
 Using these techniques, the worst-case execution time (WCET) of real-time tasks may be estimated, and then used for system-level 
 timing analyses like schedulability analysis. One major problem in  WCET analysis is how to predict the cache behavior,
 since different cache behaviors (cache hit or miss) will result in different execution times of each instruction.
 Unfortunately the existing techniques for single processor platforms are not applicable for multicores with shared caches,
+TODO questa frase non mi piace
 beacuse, due to unfair cache sharing and cache trashing, there isn't any gurantees on what a task can find and how many space it can use in shared cache.
 
 In recent years, many academies and insdustries started to study how to model and to predict cache behaviour for concurrent task in multicore architecures.
@@ -136,27 +147,29 @@ that are the most interesting part of theese type of scheduling algorithms.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The first section: scheduling model}
 
+LOGIC: nella sezione spiego quale \'e la scheduling policy che si vuole implementare e quale siano il modello di task e di piattaforma che si ipotizzano
+LOGIC: per mettere in atto la policy desiderata. 
+
 In this section, we briefly describe the basic assumptions of the hardware platform and application tasks, considered to develop cache-aware 
 scheduling algorithms
 
 %-----------------------------------------------------------------------------
 \subsection{The first subsection of the first}
 
-We assume a multicore containing a fixed number of processor cores sharing an on-chip cache. Note that this is usually an L2 cache. We 
-will not explicitly model core-local caches (usually L1) or other shared resources like interconnects. Since concurrent accesses to the shared 
+LOGIC: assunzione fatta da Guann e Stigge
+
+Assume a multicore containing a fixed number of processor cores sharing an on-chip cache. That this is usually an L2 cache. Model core-local caches 
+(usually L1) or other shared resources like interconnects are not modelled. Since concurrent accesses to the shared 
 cache give raise to the problem of reduced predictability due to cache interference, we assume the existence of a cache partitioning 
-mechanism, allowing to divide the cache space into non-overlapping partitions for independent use by the computation tasks, TODO ref alla fig.
-see Figure 1(a).
-Assuming a k-associative cache that consists of l cache sets with k cache lines each, one can distinguish set-based and associativity-base
-partitioning. The first one is also called row-based partitioning and assigns different cache sets to different partitions. It therefore enables
-up to l partitions and is thus quite fine-grained for bigger caches. The second one assigns a certain amount of lines within each cache set 
-to different partitions and is also called column-based partitioning, so it is rather coarse-grained with a maximum of just k partitions. 
-Mixtures of both variants are also possible. TODO metti una roba del tipo "tra i p\'u famosi cache partitiong approcci ricordiamo il cache coloring"
+mechanism, allowing to divide the cache space into non-overlapping partitions for independent use by the computation tasks, 
+
+TODO ref alla fig. see Figure 1(a).
+TODO far notare dopo che i meccanismi del calandro e della russa non formano non-overlapping partitions
 
 %-----------------------------------------------------------------------------
 \subsection{The second subsection of the first}
 
-TODO controlla che sia scritto fixed priority e non preemptive
+LOGIC: assunzione fatta per task RT da (Guann), anche il Calandrino ne fa una molto simile
 
 Assume a multicore platform consisting of $M$ cores and $A$ cache partitions, and a set $\tau$ of independent sporadic tasks
 whose numbers of cache partitions (cache space size needed) and WCETs are known for the platform. We use $\tau_i = \langle A_i,C_i,D_i,T_i \rangle$
@@ -170,16 +183,18 @@ with $(J_{i}^1; J_{i}^2;\dots{})$. We omit $\alpha$ and just use $J_i$ to denote
 job $J_i$ adheres to the conditions $A_i$, $C_i$ and $D_i$ of its task $\tau_i$ and has additional properties concerning \textit{absolute time points} 
 related to its execution, which we denote with lower case letters: The \textit{release time}, denoted by $r_i$, the deadline, denoted by $d_i$
 and derived using $d_i = r_i + D_i$, and the latest start time, denoted by $l_i$ and derived using $l_i = r_i + S_i$.
-Finally, without loosing generality, we assume that time is dense in our model.
+Finally, without loosing generality, we assume that time is dense in our model and, for the sake of simplicity, we assume non-preemptable and fixed priority
+task. 
 
 %-----------------------------------------------------------------------------
 \subsection{The third subsection of the first: Cache-aware scheduling}
 
+LOGIC: presento il modello, la politica generale seguita dai paper che ho letto, ovviamente questa \'e una semplificazione ma sintetizza molto bene
+LOGIC: la politica che si vuole ottenere con i cache-aware scheduling algorithms (Guan)
+
 According to assumptions made, now it is possible to present the general pattern followed by all cache-aware scheduling algorithms analyzed.
 This kind of algorithms are a variant of classic scheduling algorithms, in fact they mantain the same characteristics, such as priority inheritance,
 fixed priority etc.. and in addition they take care about which is memory region used by scheduled tasks
-TODO cerca dove mettere questa frase:
-Analyzed algorithms are non-preemptive scheduling.
 All heuristics analyzed follow theese rules: a job $J_i$ is scheduled for execution if:
 
 \begin{enumerate}
@@ -190,7 +205,6 @@ All heuristics analyzed follow theese rules: a job $J_i$ is scheduled for execut
 
 Note that, since we suppose $D_i \le T_i$ for each task, there is at most one job of each task at any time instant.
 
-TODO metti intro del Cache aware scheduler dicendo che si usano in aggiunta alla sezione 2 le MTT
 TODO metti la fig 2 del LP
 
 Figure 2 shows an example of the task set in Table 1 scheduled by this type of algorithms (the scenario that all tasks are released
@@ -200,33 +214,37 @@ i.e. there is a higher priority job ($J_{1}^3$) waiting for execution. $J_{1}^3$
 partitions available. Thus, we note that the algorithm may waste resources as it does not schedule lower priority ready jobs to execute in advance of 
 higher priority ready jobs even though there are enough resources available to accomodate them.
 
+Studied policies can be approximated by showed policy. Analyzed algorithms implement this policy using different data structures and different
+strategies such as job promoting, variable time-slice etc., but the real differences between analyzed heuristics, are metrics and methods used to 
+estimate which are the cache partitions requested by each task or thread to schedule.
 
-Studied algortihms implement showed policy, using different data structures and different strategies such as job promoting, 
-variable time-slice etc., but the real differences between analyzed heuristics, are metrics and methods used to estimate which are cache 
-partitions requested by each task or thread to schedule.
- 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The first section: cache behaviour models}
 
+LOGIC: descrivo le tecniche usate da (Calandrino) e (Fedorova) per implementare il co-scheduler. Ho scelto questi due perch\'e sono gli unici paper
+LOGIC: che spiegano bene come usare i perf. counter per misurare i miss e perch\'e il calandrino \'e RT fedorova no ma il metodo che usa \'e molto
+LOGIC: simile al calandrino
+
 To implement cache aware scheduling algortihms, it is necessary to have a co-scheduler that provide informations about cache behaviour
-to scheduler in order to decide the what is the best schedule that respect the policy previously seen.
+to scheduler in order to allow it to decide what is the best schedule that respect the policy seen in the previous section.
 In theese years, a lot of model to study cache behaviour in multicore systems were developed. In the majority, they are used as a profiling tool for
-applications and not to implement cache aware scheduling heuristics. But some interesting works developed by Calandrino and Fedorova show how it is 
-possible to build empirical and effective cache behaviour model according to "low-cost" information.
+applications and not to implement cache aware scheduling heuristics TODO ref al dynamic cache partition. 
+But some interesting works developed by Calandrino and Fedorova show how it is possible to build empirical and effective cache behaviour model 
+according to "low-cost" information suitable to implement a co-schedule systems. An Interesting thing of this two methods is that they are very 
+similar albeit they are designed for two different contexts: Calandrino et al solution is focused on Real-Time tasks Fedorova et al. method is focused 
+for fair tasks.
 
-TODO la frase \'e da rivedere specie sul "low-cost"
-But some works developed by Calandrino and Fedorova show how it is possible to build empirical and effective cache behaviour model
-suitable to implement a co-schedule systems. An Interesting thing of this two methods is that they are very similar albeit they are designed for two 
-different contexts: Calandrino et al solution is focused on Real-Time tasks Fedorova et al. method is focused for fair tasks.
+LOGIC: spiego il metodo del calandrino
 
-Works developed by Calandrino et al. is focused on multimedia soft real-time application. In this work tasks are multithreaded tasks applications (MTTs),
+Works developed by Calandrino et al. is focused on multimedia soft real-time application. In this work, tasks are multithreaded tasks applications (MTTs),
 this hypotesis don't damage generality of the task model presented in the previous section.
 Strategy proposed is a profiler that provides a per-job working set sizes (WSS) estimate for each MTT. The per-job WSS of an MTT indicates the amount 
-of memory referenced by all tasks of that MTT while executing one "job" of the MTT, where the ith job of an MTT consists of the ith jobs of all tasks in
-the MTT. It profiles MTTs rather than tasks since MTTs share a common working set. The profiling occurs during job execution, eliminating the need 
-for and offline profiling tool. WSS may be seen as an oversimplification of cache behavior; but it to work well for 
-small intervals (e.g., the execution time of a job). Further, it is usually the easiest metric to approximate efficiently given current hardware.
+of memory referenced by all tasks of that MTT while executing one "job" of the MTT TODO far capire che il job \'e il Ji di prima , where the ith job of 
+an MTT consists of the ith jobs of all  tasks in the MTT. It profiles MTTs rather than tasks since MTTs share a common working set. The profiling 
+occurs during job execution, eliminating the need for and offline profiling tool. WSS may be seen as an oversimplification of cache behavior; but 
+it to work well for small intervals (e.g., the execution time of a job). Further, it is usually the easiest metric to approximate efficiently 
+given current hardware.
 
 The profiler as stated requires several assumptions:
  
@@ -236,39 +254,43 @@ significant data unless i = j (even if T = U ); and (b) the per-job WSS of an MT
 
 2) Profiled jobs are not preempted and do not cause shared cache thrashing.
 
-The assumption (1) is natural for certain types of (multimedia) applications. To ensure assumption (2), we discard measurements obtained for jobs that
-are preempted, or for which cache thrashing occurred at some time during their execution. Thrashing is assumed to have occurred if for some
+The assumption (1) is natural for certain types of (multimedia) applications. To ensure assumption (2), it is necessary discard measurements obtained 
+for jobs that are preempted, or for which cache thrashing occurred at some time during their execution. Thrashing is assumed to have occurred if for some
 quantum in which a job is scheduled, the sum of the WSSs of all MTTs with jobs scheduled in that quantum exceeds the
 shared cache size (the same approach taken in the heuristic). For MTTs, measurements for the ith job of all tasks in the
-MTT must be discarded if the ith job of any task in the MTT was preempted or caused thrashing. Assumption (2) also implies that we are not interested
-in profiling MTTs with per-job WSSs greater than the size of the shared cache, which would thrash the shared cache even if scheduled in isolation.
+MTT must be discarded if the $ith$ job of any task in the MTT was preempted or caused thrashing. Assumption (2) also implies that it is not interesting to 
+profile MTTs with per-job WSSs greater than the size of the shared cache, which would thrash the shared cache even if scheduled in isolation.
 Further, assumption (2) ensures that the number of capacity misses observed over non-discarded jobs is negligible.
 
-The above assumptions allow us to compute over all (non-discarded) jobs an average per-job MTT WSS, which we use as our per-job WSS estimate for
+The above assumptions allow us to compute over all (non-discarded) jobs an average per-job MTT WSS, which it can be used as per-job WSS estimate for
 an MTT. This can be computed by dividing the total shared cache misses observed over all profiled jobs by the total number of profiled jobs for an MTT, 
-and multiplying the result by the cache line size. (Profiling the ith job of an MTT requires profiling the ith job of all tasks in the MTT, and
+and multiplying the result by the cache line size. 
+
+TODO metti una formula per questa metrica
+
+(Profiling the $ith$ job of an MTT requires profiling the $ith$ job of all tasks in the MTT, and
 recording the total misses observed for all jobs.) The first reference to a particular line of data by a job will almost always be the only reference
 that results in a cache miss, and that miss will be compulsory, since data brought into the cache should not be evicted during job execution.
 Thus, the aforementioned computation results in an estimate of the cache "footprint" of an MTT, which we use as a first approximation of WSS.
 
-But, how can it is possible to measure shared cache misses? Thanks to performance counters TODO see ref in appendix.
-A performance counter for each core is programmed to track lower-level shared cache. Since jobs execute sequentially, we can measure the number of
-cache misses incurred for a job by resetting the counter to zero at the start of execution, and recording the total misses observed by the counter
+But, how can it is possible to measure shared cache misses? Thanks to performance counters. TODO see ref in appendix.
+A performance counter for each core is programmed to track lower-level shared cache. Since jobs execute sequentially, it is possible to measure the number
+of cache misses incurred for a job by resetting the counter to zero at the start of execution, and recording the total misses observed by the counter
 upon completion. The observed misses can then be used to calculate a per-job WSS estimate. Since accessing program counters and recording data
 are low-overhead operations, and computed WSS estimates are cached to minimize computation, the overhead of the profiler is relatively low.
 
-Another question is: at the beginning of an MTT application there aren't any measure about its cache misses, how can it is possbile to make decision 
+Another question is: at the beginning of an MTT application there aren't any measure about its cache misses, how can it is possbile to make decision
 about which task to schedule in order to avoid cache trashing?
 Profiler has a bootstrapping process, in which an estimate of all MTT's WSS is done. This phase converge pretty fast to a reasonable result.
 For details see TODO Calandrino 
 
-Solution developed by Fedorova et al. It consider generic multithreaded tasks that can be preempted, it is not focused on soft Real-time applications.
+Solution developed by Fedorova et al. consider generic multithreaded tasks that can be preempted or not, it is not focused on soft Real-time applications.
 Their approach is based on an empirically observation that if the co-runners have similar cache miss rates they share the cache
 roughly equally. So if co-runners A and B experience similar miss rates, they share the cache equally and they each experience their
 \textbf{fair miss rate}. In this case, A and B are cache-friendly co-runners.
 
 The fair miss rate is the number of misses per cycle (MPC) that would be generated by a thread if the cache were shared equally. This is metric used
-to determine TODO il miglior accoppiamento tra task.
+to determine the best grouping between task.
 
 Procedure to estimate the fair cache miss rate for each thread is very simple.
 For each thread to profile, call it Thread A, execute it with several different co-runners and derive the relationship between its miss rate and 
@@ -281,18 +303,16 @@ rate.
 This strategy is based on two important assumptions (1) Cache-friendly co-runners have similar cache miss rates, and 
 (2) the relationship between co-runners' miss rates is linear.
 
-The first assumption is true, because if each thread's L2 cache accesses are uniformly distributed in the cache, it is possible to model cache 
+The first assumption is true, because if each thread's shared cache accesses are uniformly distributed in the cache, it is possible to model cache 
 replacement as a simple case of the balls in bins problem. 
 Assume two co-runners, whose cache requests correspond to black and white balls respectively.
 We toss black and white balls into a bin. Each time a ball enters the bin, a ball is evicted from
 the bin. If we throw the black and white balls at the same rate, then the number of black balls in the bin after many tosses will form a 
 multinomial distribution centered around one-half. This result generalizes to any number of different colored balls being tossed at
-the same rate. Thus, two threads with the same L2 cache miss rate (balls being tossed at the same rate) will share the cache equally. 
+the same rate. Thus, two threads with the same shared cache miss rate (balls being tossed at the same rate) will share the cache equally. 
 It is important to remark that this assumption is true only if cache request are uniformly distributed. Fedorova et al. have measured cache requested 
 made by SPEC2000 benchmarks, and they have found that for most benchmarks, the distribution was close to uniform, so it is correct using the balls in bins
 problem to represent cache replacement
-
-TODO togli il we e metti la terza persona
 
 The second assumption is demonstrated by this experiment.
 They chose nine benchmarks from the SPEC CPU2000 suite with different cache access patterns and ran them in pairs on our simulated dual-core processor. 
@@ -311,9 +331,11 @@ and the expression for $FairMissRate(T)$ is:
 
 	$FairMissRate(T) = b over 1 - a*n$
 
-The cache-fair scheduler dynamically derives coefficients for Equation 1 for each cache-fair thread at runtime and then estimates its fair cache 
-miss rate. Also in this case, cache misses are retrived using performance counters, expressly programmed. Furthermore, also this method requires a 
+The co-scheduler implemented dynamically derives coefficients for Equation 1 for each cache-fair thread at runtime and then estimates its fair cache 
+miss rate. Also in this case, cache misses are retrived using performance counters, expressly programmed. Further, also this method requires a 
 bootstrapping phase used to account thread's cache access pattern. 
+
+LOGIC: elenco differenze tra i due approcci
 
 Showed approches are similar, but present some differences.
 First of all, as I said before, they are focused on two different type of tasks: first strategy considers Real-Time tasks, 
@@ -325,23 +347,22 @@ Both strategies try to understand how scheduled thread use shared cache, but the
 to prevent cache trashing, the latter is more complex, it tries to prevent cache trashing too, furthermore it tries to understand how two co-scheduled
 threads use shared cache.
 
+TODO dire qualcosa sulle metriche magari
+
 Calandrino and Fedorova show in their papers how their works reduce shared cache miss and how this fact improve execution time (and predictability) 
 of benchmarks tested.
-Cache-aware scheduling policies are important not only because they improve performance, but also for another reason related to Real-Time task
-Using task model and scheduling policy presented in the previous sections, therefore using a cache-aware policy, Guan et al. have developed a 
+
+LOGIC: spiega il modello LP (Guan) perch\'e \'e uno dei vantaggi pi\'u significativi degli scheduler cache aware
+
+Cache-aware scheduling policies are important not only because they improve performance, but also for another important reason related to Real-Time task
+Considering task model and scheduling policy presented in the previous sections, therefore using a cache-aware policy, Guan et al. have developed a 
 schedulability test for multicores with shared cache, formuled as a linear programming problem.
-Their experiment experiments show that the test, which employs an LP solver, can easily handle task sets with thousands of tasks in minutes using a 
+Their work shows that the test, which employs an LP solver, can easily handle task sets with thousands of tasks in minutes using a 
 desktop computer, therefore it is a good candidate for efficient schedulability tests in the design loop for embedded systems or as an
 on-line test for admission control.
 In briefly, They show how, with a proper use of shared resource such as L2, it is possible improve predictability
 of Real-Time tasks in order to perform system-level schedulability analysis for multicore systems based on task-level timing analysis using
 existing WCET analysis techniques.
-
-TODO dire svantaggi metodi usati finora e i vantaggi del mio
-In this section I have presented some motivations that explain why it is important to take in account shared cache in multicore platforms.
-Presented cache aware scheduling algortihms are based on a co-scheduler that provide necessary information to take care about cache.
-Solution developed in this thesis doesn't use co-scheduler 
-
 
 % We suggest the use of JabRef for editing your bibliography file (Report.bib)
 \bibliographystyle{splncs}
